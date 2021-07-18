@@ -7,16 +7,27 @@ const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const User = require('./models/user')
 const PORT = process.env.PORT || 5000;
-const {
-    Projet,
-    Maitre,
-    Foncier,
-    Directeur,
-    Operation,
-    Marche,
-    Lot,
-    Avancement,
-    Count } = require('./models/model');
+var jwt = require('jsonwebtoken')
+const Projet = require('./models/projet')
+const Operation = require('./models/operation')
+const Lot = require('./models/lot')
+const Avancement = require('./models/avancement')
+const Marche = require('./models/marche')
+const Foncier = require('./models/foncier')
+const Count = require('./models/count')
+const Maitre = require('./models/maitre')
+const Directeur = require('./models/directeur')
+const { allProjets, findByIdProjet, createProjet, deleteProjet, updateProjet, findByNomProjet } = require('./controllers/projetControlller');
+const { findByNumAv, updateAvancement, allAvancement, createAvancement, deleteAvancement } = require('./controllers/avancementController');
+const { findByIdMarche, updateMarche, allMarche, createMarche, findByNumMarche, deleteMarche } = require('./controllers/marcheController');
+const { findByMatricule, findByCodeDirecteur, allDirecteurs, createDirecteur, deleteDirecteur, updateDirecteur } = require('./controllers/directeurController');
+const { findByLocalite, allFoncier, createFoncier, findByCodeFoncier, updateFoncier, deleteFoncier } = require('./controllers/foncierController');
+const { findByDesignation, findByIdLot, allLots, createLot, deleteLot, updateLot } = require('./controllers/lotController');
+const { findByCodeMaitre, updateMaitre, allMaitre, createMaitre, findByRaisonMaitre, deleteMaitre } = require('./controllers/maitreController');
+const { findByNomOperation, updateOperation, allOperation, createOperation, findByIdOperation, deleteOperation } = require('./controllers/operationController');
+
+
+
 app.use(express.json())
 app.use(cors())
 
@@ -50,349 +61,6 @@ const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 
-
-
-
-let projetController = {
-    findByNom: async (req, res) => {
-        let found = await Projet.findOne({ nomProjet: req.params.nomProjet }).populate('maitreOuvrage').populate('directeur').populate('foncier').exec()
-        res.json(found);
-    },
-    findById: async (req, res) => {
-        let found = await Projet.findOne({ idProjet: req.params.id })
-            .populate('maitreOuvrage')
-            .populate('directeur')
-            .populate('foncier')
-            .exec()
-        res.json(found);
-    },
-    allProjet: async (req, res) => {
-        let allProjets = await Projet.find()
-            .populate('maitreOuvrage')
-            .populate('directeur')
-            .populate('foncier')
-            .exec()
-        res.json(allProjets)
-    },
-    createProjet: async (req, res) => {
-        let newProjet = new Projet(req.body);
-        let savedProjet = await newProjet.save();
-        res.send('sucess');
-    },
-    deleteProjet: async (req, res) => {
-        await Projet.deleteOne({ idProjet: req.params.id })
-            .then(() => res.status(200).json({ message: "Objet Suprimmé" }))
-            .catch(error => res.status(400).json({ error }))
-    },
-    updateProjet: async (req, res) => {
-        await Projet.updateOne({ idProjet: req.params.id }, { ...req.body, idProjet: req.params.id })
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch(error => res.status(400).json({ error }));
-    }
-}
-
-let lotController = {
-    insertMany: async (req, res) => {
-        Lot.insertMany(req.body).then(() => {
-            res.status(200).json({ message: "Success" })
-        }).catch(err => {
-            res.status(400).json({ err })
-        });
-    },
-    findByDesignation: async (req, res) => {
-        let found = await Lot.findOne({ designationLot: req.params.des })
-        res.json(found);
-    },
-    findById: async (req, res) => {
-        let found = await Lot.findOne({ idLot: req.params.id })
-        res.json(found);
-    },
-    allLots: async (req, res) => {
-        let allLot = await Lot.find()
-        res.json(allLot)
-    },
-    createLot: async (req, res) => {
-        let newLot = new Lot(req.body);
-        let savedLot = await newLot.save();
-        res.json(savedLot);
-    },
-    deleteLot: async (req, res) => {
-        await Lot.deleteOne({ idLot: req.params.id })
-            .then(() => res.status(200).json({ message: "Objet Suprimmé" }))
-            .catch(error => res.status(400).json({ error }))
-    },
-    updateLot: async (req, res) => {
-        await Lot.updateOne({ idLot: req.params.id }, { ...req.body, idLot: req.params.id })
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch(error => res.status(400).json({ error }));
-    }
-}
-
-//Maitre Controller
-
-let maitreController = {
-
-    findByCode: async (req, res) => {
-        let found = await Maitre.find({ codeMaitreOuvrage: req.params.code })
-        res.json(found);
-    },
-
-    updateMaitre: async (req, res) => {
-        await Maitre.updateOne({ codeMaitreOuvrage: req.params.code }, { ...req.body, codeMaitreOuvrage: req.params.code })
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch(error => res.status(400).json({ error }));
-    },
-    all: async (req, res) => {
-        let allMaitre = await Maitre.find()
-        res.json(allMaitre)
-    },
-
-    create: async (req, res) => {
-        let newMaitre = new Maitre(req.body);
-        let savedMaitre = await newMaitre.save();
-        res.json(savedMaitre);
-    },
-
-    findByRaison: async (req, res) => {
-        let foundMaitre = await Maitre.find({ raisonSocial: req.params.raisonSocial })
-        res.json(foundMaitre)
-    },
-    delete: async (req, res) => {
-        await Maitre.deleteOne({ codeMaitreOuvrage: req.params.id })
-            .then(() => res.status(200).json({ message: "Objet Suprimmé" }))
-            .catch(error => res.status(400).json({ error }))
-    }
-}
-
-
-
-//Foncier Controller
-
-let foncierController = {
-    find: async (req, res) => {
-        let found = await Foncier.find({ localite: req.params.localite })
-        res.json(found);
-    },
-
-    all: async (req, res) => {
-        let allFoncier = await Foncier.find()
-        res.json(allFoncier)
-    },
-
-    create: async (req, res) => {
-        let newFoncier = new Foncier(req.body);
-        let savedFoncier = await newFoncier.save();
-        res.json(savedFoncier);
-    },
-
-    findByCode: async (req, res) => {
-        let foundFoncier = await Foncier.find({ codeFoncier: req.params.codeFoncier })
-        res.json(foundFoncier)
-    },
-    updateFoncier: async (req, res) => {
-        await Foncier.updateOne({ codeFoncier: req.params.code }, { ...req.body, codeFoncier: req.params.code })
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch(error => res.status(400).json({ error }));
-    },
-
-    deleteFoncier: async (req, res) => {
-        await Foncier.deleteOne({ codeFoncier: req.params.code })
-            .then(() => res.status(200).json({ message: "Objet Suprimmé" }))
-            .catch(error => res.status(400).json({ error }))
-    }
-}
-
-
-//Directeur Controller
-
-let directeurController = {
-
-    findByMatricule: async (req, res) => {
-        let found = await Directeur.find({ matricule: req.params.matricule })
-        res.json(found);
-    },
-    findByCode: async (req, res) => {
-        let found = await Directeur.find({ code: req.params.code })
-        res.json(found);
-    },
-
-    allDirecteurs: async (req, res) => {
-        let allDirecteur = await Directeur.find()
-        res.json(allDirecteur)
-    },
-
-    createDirecteur: async (req, res) => {
-        let newDirecteur = new Directeur(req.body);
-        let savedDirecteur = await newDirecteur.save();
-        res.json(savedDirecteur);
-    },
-
-    deleteDirecteur: async (req, res) => {
-        await Directeur.deleteOne({ code: req.params.code })
-            .then(() => res.status(200).json({ message: "Objet Suprimmé" }))
-            .catch(error => res.status(400).json({ error }))
-    },
-    updateDirecteur: async (req, res) => {
-        await Directeur.updateOne({ code: req.params.code }, { ...req.body, code: req.params.code })
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch(error => res.status(400).json({ error }));
-    },
-}
-
-
-//Operation Controller
-
-let operationController = {
-
-    findByNom: async (req, res) => {
-        let found = await Operation.find({ nomOperation: req.params.nom })
-            .populate('foncier').populate('projet')
-            .populate('directeur')
-            .populate('maitreOuvrage')
-            .exec()
-        res.json(found);
-    },
-
-    updateOperation: async (req, res) => {
-        await Operation.updateOne({ idOperation: req.params.id }, { ...req.body, idOperation: req.params.id })
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch(error => res.status(400).json({ error }));
-    },
-    allOperation: async (req, res) => {
-        let allOperation = await Operation.find().populate('foncier').populate('projet').populate('directeur').populate('maitreOuvrage').exec()
-        res.json(allOperation)
-    },
-
-    createOperation: async (req, res) => {
-        let newOperation = new Operation(req.body);
-        let savedOperation = await newOperation.save();
-        res.json(savedOperation);
-    },
-
-    findById: async (req, res) => {
-        let foundOperation = await Operation.find({ idOperation: req.params.id })
-            .populate('foncier')
-            .populate('projet')
-            .populate('directeur')
-            .populate('maitreOuvrage')
-            .exec()
-        res.json(foundOperation)
-    },
-    deleteOperation: async (req, res) => {
-        await Operation.deleteOne({ idOperation: req.params.id })
-            .then(() => res.status(200).json({ message: "Objet Suprimmé" }))
-            .catch(error => res.status(400).json({ error }))
-    }
-}
-
-
-//Marche Controller
-
-let marcheController = {
-    findById: async (req, res) => {
-        let found = await Marche.find({ idMarche: req.params.id })
-            .populate('operation').populate('lotMarche')
-            .populate('directeur')
-            .populate('maitreOuvrage')
-            .exec()
-        res.json(found);
-    },
-
-    updateMarche: async (req, res) => {
-        await Marche.updateOne({ idMarche: req.params.id }, { ...req.body, idMarche: req.params.id })
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch(error => res.status(400).json({ error }));
-    },
-    allMarche: async (req, res) => {
-        let allMarche = await Marche.find()
-            .populate('operation').populate('lotMarche')
-            .populate('directeur')
-            .populate('maitreOuvrage')
-            .exec()
-        res.json(allMarche)
-    },
-
-    createMarche: async (req, res) => {
-        let newMarche = new Marche(req.body);
-        let savedMarche = await newMarche.save();
-        res.json(savedMarche);
-    },
-
-    findByNum: async (req, res) => {
-        let foundMarche = await Marche.find({ numMarche: req.params.num })
-            .populate('operation').populate('lotMarche')
-            .populate('directeur')
-            .populate('maitreOuvrage')
-            .exec()
-        res.json(foundMarche)
-    },
-    deleteMarche: async (req, res) => {
-        await Marche.deleteOne({ idMarche: req.params.id })
-            .then(() => res.status(200).json({ message: "Objet Suprimmé" }))
-            .catch(error => res.status(400).json({ error }))
-    }
-}
-
-
-
-let countController = {
-
-    allCount: async (req, res) => {
-        let allCount = await Count.find()
-        res.json(allCount)
-    },
-
-    createMarche: async (req, res) => {
-        let newCount = new Count({
-            nbProjet: Projet.countDocuments(),
-            nbDirecteur: Directeur.countDocuments(),
-            nbMarche: Marche.countDocuments(),
-            nbLot: Lot.countDocuments()
-        });
-        let savedMarche = await newCount.save(newCount);
-        res.json(savedMarche);
-    },
-
-}
-
-
-//Avancements Controller
-
-let avancementController = {
-
-    findByNum: async (req, res) => {
-        let found = await Avancement.find({ numAvancement: req.params.num })
-            .populate('marche')
-            .exec()
-        res.json(found);
-    },
-
-    updateAvancement: async (req, res) => {
-        await Avancement.updateOne({ numAvancement: req.params.num }, { ...req.body, numAvancement: req.params.num })
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch(error => res.status(400).json({ error }));
-    },
-    allAvancement: async (req, res) => {
-        let allAvancement = await Avancement.find()
-            .populate('marche')
-            .exec()
-        res.json(allAvancement)
-    },
-
-    createAvancement: async (req, res) => {
-        let newAvancement = new Avancement(req.body);
-        let savedAvancement = await newAvancement.save();
-        res.json(savedAvancement);
-    },
-
-    deleteAvancement: async (req, res) => {
-        await Avancement.deleteOne({ numAvancement: req.params.num })
-            .then(() => res.status(200).json({ message: "Objet Suprimmé" }))
-            .catch(error => res.status(400).json({ error }))
-    }
-}
-
-
 //Les Routes
 
 /**
@@ -407,7 +75,7 @@ let avancementController = {
  *      '200':
  *        description: A successful response
  */
-app.get("/maitres", maitreController.all)
+app.get("/maitres", allMaitre)
 
 /**
  * @swagger
@@ -421,7 +89,7 @@ app.get("/maitres", maitreController.all)
  *      '200':
  *        description: A successful response
  */
-app.get("/maitres/:code", maitreController.findByCode)
+app.get("/maitres/:code", findByCodeMaitre)
 
 /**
  * @swagger
@@ -435,7 +103,7 @@ app.get("/maitres/:code", maitreController.findByCode)
  *      '200':
  *        description: A successful response
  */
-app.get("/maitres/raisonSocial/:raisonSocial", maitreController.findByRaison)
+app.get("/maitres/raisonSocial/:raisonSocial", findByRaisonMaitre)
 
 /**
  * @swagger
@@ -469,7 +137,7 @@ app.get("/maitres/raisonSocial/:raisonSocial", maitreController.findByRaison)
  *      '201':
  *        description: Successfully created maitre d'ouvrage
  */
-app.post("/maitres/newmaitre", maitreController.create)
+app.post("/maitres/newmaitre", createMaitre)
 
 /**
  * @swagger
@@ -483,7 +151,7 @@ app.post("/maitres/newmaitre", maitreController.create)
  *      '200':
  *        description: A successful delete
  */
-app.delete("/maitres/d/:id", maitreController.delete)
+app.delete("/maitres/d/:id", deleteMaitre)
 
 /**
  * @swagger
@@ -497,7 +165,7 @@ app.delete("/maitres/d/:id", maitreController.delete)
  *      '200':
  *        description: A successful update
  */
-app.put("/maitres/u/:code", maitreController.updateMaitre)
+app.put("/maitres/u/:code", updateMaitre)
 
 
 /**
@@ -513,8 +181,10 @@ app.put("/maitres/u/:code", maitreController.updateMaitre)
  *        description: A successful response
  * 
  */
-app.post("/projets", projetController.allProjet)
-app.get("/projets", projetController.allProjet)
+
+app.get('/projets', allProjets);
+app.post('/projets', allProjets);
+
 /**
  * @swagger
  * /projets/{id}:
@@ -527,7 +197,7 @@ app.get("/projets", projetController.allProjet)
  *      '200':
  *        description: A successful response
  */
-app.get("/projets/:id", projetController.findById)
+app.get("/projets/:id", findByIdProjet)
 
 
 /**
@@ -542,7 +212,7 @@ app.get("/projets/:id", projetController.findById)
  *      '200':
  *        description: A successful response
  */
-app.get("/projets/nomprojet/:nomProjet", projetController.findByNom)
+app.get("/projets/nomprojet/:nomProjet", findByNomProjet)
 
 /**
  * @swagger
@@ -592,7 +262,7 @@ app.get("/projets/nomprojet/:nomProjet", projetController.findByNom)
  *      '201':
  *        description: Successfully created projet
  */
-app.post("/projets/newprojet", projetController.createProjet)
+app.post("/projets/newprojet", createProjet)
 
 /**
  * @swagger
@@ -606,7 +276,7 @@ app.post("/projets/newprojet", projetController.createProjet)
  *      '200':
  *        description: A successful delete
  */
-app.delete("/projets/d/:id", projetController.deleteProjet)
+app.delete("/projets/d/:id", deleteProjet)
 
 /**
  * @swagger
@@ -620,7 +290,7 @@ app.delete("/projets/d/:id", projetController.deleteProjet)
  *      '200':
  *        description: A successful update
  */
-app.put("/projets/u/:id", projetController.updateProjet)
+app.put("/projets/u/:id", updateProjet)
 
 
 /**
@@ -635,7 +305,7 @@ app.put("/projets/u/:id", projetController.updateProjet)
  *      '200':
  *        description: A successful response
  */
-app.get("/fonciers", foncierController.all)
+app.get("/fonciers", allFoncier)
 
 /**
  * @swagger
@@ -649,7 +319,7 @@ app.get("/fonciers", foncierController.all)
  *      '200':
  *        description: A successful response
  */
-app.get("/fonciers/:codeFoncier", foncierController.findByCode)
+app.get("/fonciers/:codeFoncier", findByCodeFoncier)
 
 
 /**
@@ -692,7 +362,7 @@ app.get("/fonciers/:codeFoncier", foncierController.findByCode)
  *      '201':
  *        description: Successfully created foncier
  */
-app.post("/fonciers/newfoncier", foncierController.create)
+app.post("/fonciers/newfoncier", createFoncier)
 
 
 
@@ -708,7 +378,7 @@ app.post("/fonciers/newfoncier", foncierController.create)
  *      '200':
  *        description: A successful delete
  */
-app.delete("/fonciers/d/:code", foncierController.deleteFoncier)
+app.delete("/fonciers/d/:code", deleteFoncier)
 
 
 
@@ -726,7 +396,7 @@ app.delete("/fonciers/d/:code", foncierController.deleteFoncier)
  *      '200':
  *        description: A successful update
  */
-app.put("/fonciers/u/:code", foncierController.updateFoncier)
+app.put("/fonciers/u/:code", updateFoncier)
 
 
 
@@ -744,8 +414,8 @@ app.put("/fonciers/u/:code", foncierController.updateFoncier)
  *      '200':
  *        description: A successful response
  */
-app.post("/directeurs", directeurController.allDirecteurs)
-app.get("/directeurs", directeurController.allDirecteurs)
+app.post("/directeurs", allDirecteurs)
+app.get("/directeurs", allDirecteurs)
 
 
 /**
@@ -760,7 +430,7 @@ app.get("/directeurs", directeurController.allDirecteurs)
  *      '200':
  *        description: A successful response
  */
-app.get("/directeurs/:code", directeurController.findByCode)
+app.get("/directeurs/:code", findByCodeDirecteur)
 
 
 /**
@@ -775,7 +445,7 @@ app.get("/directeurs/:code", directeurController.findByCode)
  *      '200':
  *        description: A successful response
  */
-app.get("/directeurs/matricule/:matricule", directeurController.findByMatricule)
+app.get("/directeurs/matricule/:matricule", findByMatricule)
 
 
 /**
@@ -820,7 +490,7 @@ app.get("/directeurs/matricule/:matricule", directeurController.findByMatricule)
  *      '201':
  *        description: Successfully created Directeur
  */
-app.post("/directeurs/newdirecteur", directeurController.createDirecteur)
+app.post("/directeurs/newdirecteur", createDirecteur)
 
 
 /**
@@ -835,7 +505,7 @@ app.post("/directeurs/newdirecteur", directeurController.createDirecteur)
  *      '200':
  *        description: A successful delete
  */
-app.delete("/directeurs/d/:code", directeurController.deleteDirecteur)
+app.delete("/directeurs/d/:code", deleteDirecteur)
 
 
 /**
@@ -850,7 +520,7 @@ app.delete("/directeurs/d/:code", directeurController.deleteDirecteur)
  *      '200':
  *        description: A successful Update
  */
-app.put("/directeurs/u/:code", directeurController.updateDirecteur)
+app.put("/directeurs/u/:code", updateDirecteur)
 
 
 
@@ -872,8 +542,8 @@ app.put("/directeurs/u/:code", directeurController.updateDirecteur)
  *      '200':
  *        description: A successful response
  */
-app.post("/marches", marcheController.allMarche)
-app.get("/marches", marcheController.allMarche)
+app.post("/marches", allMarche)
+app.get("/marches", allMarche)
 
 
 
@@ -889,7 +559,7 @@ app.get("/marches", marcheController.allMarche)
  *      '200':
  *        description: A successful response
  */
-app.get("/marches/:id", marcheController.findById)
+app.get("/marches/:id", findByIdMarche)
 
 
 /**
@@ -904,7 +574,7 @@ app.get("/marches/:id", marcheController.findById)
  *      '200':
  *        description: A successful response
  */
-app.get("/marches/nummarche/:num", marcheController.findByNum)
+app.get("/marches/nummarche/:num", findByNumMarche)
 
 
 /**
@@ -959,7 +629,7 @@ app.get("/marches/nummarche/:num", marcheController.findByNum)
  *      '201':
  *        description: Successfully created Marche
  */
-app.post("/marches/newmarche", marcheController.createMarche)
+app.post("/marches/newmarche", createMarche)
 
 
 /**
@@ -974,7 +644,7 @@ app.post("/marches/newmarche", marcheController.createMarche)
  *      '200':
  *        description: A successful delete
  */
-app.delete("/marches/d/:id", marcheController.deleteMarche)
+app.delete("/marches/d/:id", deleteMarche)
 
 
 /**
@@ -989,7 +659,7 @@ app.delete("/marches/d/:id", marcheController.deleteMarche)
  *      '200':
  *        description: A successful Update
  */
-app.put("/marches/u/:id", marcheController.updateMarche)
+app.put("/marches/u/:id", updateMarche)
 
 
 
@@ -1036,9 +706,9 @@ app.put("/marches/u/:id", marcheController.updateMarche)
  *      '200':
  *        description: A successful response
  */
-app.post("/lots", lotController.allLots)
-app.get("/lots", lotController.allLots)
-app.get("/operations", operationController.allOperation)
+app.post("/lots", allLots)
+app.get("/lots", allLots)
+app.get("/operations", allOperation)
 
 /**
  * @swagger
@@ -1052,7 +722,7 @@ app.get("/operations", operationController.allOperation)
  *      '200':
  *        description: A successful response
  */
-app.get("/lots/:id", lotController.findById)
+app.get("/lots/:id", findByIdLot)
 
 /**
  * @swagger
@@ -1066,7 +736,7 @@ app.get("/lots/:id", lotController.findById)
  *      '200':
  *        description: A successful response
  */
-app.get("/lots/designation/:des", lotController.findByDesignation)
+app.get("/lots/designation/:des", findByDesignation)
 
 /**
  * @swagger
@@ -1090,7 +760,7 @@ app.get("/lots/designation/:des", lotController.findByDesignation)
  *      '201':
  *        description: Successfully created Directeur
  */
-app.post("/lots/newlot", lotController.createLot)
+app.post("/lots/newlot", createLot)
 
 /**
  * @swagger
@@ -1104,7 +774,7 @@ app.post("/lots/newlot", lotController.createLot)
  *      '200':
  *        description: A successful delete
  */
-app.delete("/lots/d/:id", lotController.deleteLot)
+app.delete("/lots/d/:id", deleteLot)
 
 
 /**
@@ -1119,7 +789,7 @@ app.delete("/lots/d/:id", lotController.deleteLot)
  *      '200':
  *        description: A successful update
  */
-app.put("/lots/u/:id", lotController.updateLot)
+app.put("/lots/u/:id", updateLot)
 
 
 
@@ -1150,8 +820,8 @@ app.put("/lots/u/:id", lotController.updateLot)
  *        description: A successful response
  * 
  */
-app.post("/operations", operationController.allOperation)
-app.post("/count", countController.allCount)
+app.post("/operations", allOperation)
+// app.post("/count", countController.allCount)
 
 /**
  * @swagger
@@ -1165,7 +835,7 @@ app.post("/count", countController.allCount)
  *      '200':
  *        description: A successful response
  */
-app.get("/operations/:id", operationController.findById)
+app.get("/operations/:id", findByIdOperation)
 
 
 /**
@@ -1180,7 +850,7 @@ app.get("/operations/:id", operationController.findById)
  *      '200':
  *        description: A successful response
  */
-app.get("/operations/nomoperation/:nom", operationController.findByNom)
+app.get("/operations/nomoperation/:nom", findByNomOperation)
 
 /**
  * @swagger
@@ -1232,7 +902,7 @@ app.get("/operations/nomoperation/:nom", operationController.findByNom)
  *      '201':
  *        description: Successfully created Operation
  */
-app.post("/operations/newoperation", operationController.createOperation)
+app.post("/operations/newoperation", createOperation)
 
 /**
  * @swagger
@@ -1246,7 +916,7 @@ app.post("/operations/newoperation", operationController.createOperation)
  *      '200':
  *        description: A successful delete
  */
-app.delete("/operations/d/:id", operationController.deleteOperation)
+app.delete("/operations/d/:id", deleteOperation)
 
 /**
  * @swagger
@@ -1260,7 +930,7 @@ app.delete("/operations/d/:id", operationController.deleteOperation)
  *      '200':
  *        description: A successful update
  */
-app.put("/operations/u/:id", operationController.updateOperation)
+app.put("/operations/u/:id", updateOperation)
 
 
 
@@ -1283,7 +953,7 @@ app.put("/operations/u/:id", operationController.updateOperation)
  *        description: A successful response
  * 
  */
-app.get("/avancements", avancementController.allAvancement)
+app.get("/avancements", allAvancement)
 
 /**
  * @swagger
@@ -1297,7 +967,7 @@ app.get("/avancements", avancementController.allAvancement)
  *      '200':
  *        description: A successful response
  */
-app.get("/avancements/:num", avancementController.findByNum)
+app.get("/avancements/:num", findByNumAv)
 
 
 
@@ -1337,7 +1007,7 @@ app.get("/avancements/:num", avancementController.findByNum)
  *      '201':
  *        description: Successfully created Avancement
  */
-app.post("/avancements/newavancement", avancementController.createAvancement)
+app.post("/avancements/newavancement", createAvancement)
 
 /**
  * @swagger
@@ -1351,7 +1021,7 @@ app.post("/avancements/newavancement", avancementController.createAvancement)
  *      '200':
  *        description: A successful delete
  */
-app.delete("/avancements/d/:num", avancementController.deleteAvancement)
+app.delete("/avancements/d/:num", deleteAvancement)
 
 /**
  * @swagger
@@ -1365,21 +1035,21 @@ app.delete("/avancements/d/:num", avancementController.deleteAvancement)
  *      '200':
  *        description: A successful update
  */
-app.put("/avancements/u/:num", avancementController.updateAvancement)
+app.put("/avancements/u/:num", updateAvancement)
 
 
-const paginatedProjets = require('./controllers/paginatedProjets')
 
-app.get('/projet', paginatedProjets(Projet), (req, res) => {
+
+
+const paginatedMarches = require('./controllers/marcheControllerPaginated')
+
+app.get('/marche', paginatedMarches(Marche), (req, res) => {
     res.json(res.paginatedResults)
 })
 
 
-const paginatedOperations = require('./controllers/paginatedOperations')
 
-app.get('/operation', paginatedOperations(Projet), (req, res) => {
-    res.json(res.paginatedResults)
-})
+
 
 
 
@@ -1415,7 +1085,13 @@ app.post('/signin', (req, res) => {
     })
 })
 
-
+app.post('/login', function (req, res) {
+    const user = { id: 3 };
+    const token = jwt.sign({ user }, "my secret");
+    res.json({
+        token: token
+    });
+})
 
 app.listen(PORT)
 
